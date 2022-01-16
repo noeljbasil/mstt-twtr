@@ -1,0 +1,10 @@
+googledrivedownloader==0.4
+nltk
+pygsheets==2.0.5
+regex
+git+https://github.com/JustAnotherArchivist/snscrape.git
+pandas
+python-dateutil
+APScheduler==3.0.0
+requests
+python-math
