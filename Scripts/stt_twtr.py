@@ -32,7 +32,7 @@ def scrapping_job():
         tweets_list = []
 
         # Using TwitterSearchScraper to scrape data and append tweets to list
-        for i,tweet in enumerate(sntwitter.TwitterProfileScraper(username='STOPTHETRAFFIK',isUserId=False).get_items()):
+        for i,tweet in enumerate(sntwitter.TwitterProfileScraper(user='STOPTHETRAFFIK').get_items()):
             tweets_list.append([tweet.date, tweet.content, tweet.hashtags, tweet.likeCount, tweet.retweetCount,tweet.replyCount, tweet.quoteCount, tweet.retweetedTweet, tweet.quotedTweet, tweet.media, tweet.lang, tweet.url])
 
         # Creating a dataframe from the tweets list above
