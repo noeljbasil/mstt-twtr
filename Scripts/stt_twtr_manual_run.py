@@ -29,8 +29,11 @@ def get_all_tweets():
     # Creating list to append tweet data to
     tweets_list = []
 
+    #setting proxies
+    proxies = {'https': 'http://137.74.196.132:3128',}
+
     # Using TwitterSearchScraper to scrape data and append tweets to list
-    for i,tweet in enumerate(sntwitter.TwitterProfileScraper(user='STOPTHETRAFFIK').get_items()):
+    for i,tweet in enumerate(sntwitter.TwitterProfileScraper(user='STOPTHETRAFFIK',proxies= proxies).get_items()):
         tweets_list.append([tweet.date, tweet.content, tweet.hashtags, tweet.likeCount, tweet.retweetCount,tweet.replyCount, tweet.quoteCount, tweet.retweetedTweet, tweet.quotedTweet, tweet.media, tweet.lang, tweet.url])
 
     # Creating a dataframe from the tweets list above
