@@ -11,6 +11,7 @@ import pygsheets
 import re
 import snscrape.modules.twitter as sntwitter
 import time
+import tweepy
 from   dateutil.relativedelta import relativedelta
 import os
 import requests
@@ -25,47 +26,86 @@ def scrapping_job():
     #program start time
     start_time = time.time()
 
-    def get_all_tweets():
-        """This function scraps last ~3200 tweets of STT"""
-        
-        # Creating list to append tweet data to
-        tweets_list = []
+    #initiating tweepy client
+    bearer_token = os.environ['Bearer_token']
+    client = tweepy.Client(bearer_token=bearer_token)
 
-        # Using TwitterSearchScraper to scrape data and append tweets to list
-        for i,tweet in enumerate(sntwitter.TwitterProfileScraper(user='STOPTHETRAFFIK').get_items()):
-            tweets_list.append([tweet.date, tweet.content, tweet.hashtags, tweet.likeCount, tweet.retweetCount,tweet.replyCount, tweet.quoteCount, tweet.retweetedTweet, tweet.quotedTweet, tweet.media, tweet.lang, tweet.url])
-
-        # Creating a dataframe from the tweets list above
-        tweets_df = pd.DataFrame(tweets_list, columns=['Datetime', 'Text', 'Hashtags', 'Like Count', 'Retweet Count','Reply Count','Quote Count', 'Retweeted', 'Quoted Tweet','Media','Language','URL'])
-        tweets_df['Update Date'] = date.today().strftime("%d %b %Y")
-        
-        return tweets_df
+    datetime = []
+    text = []
+    hashtags = []
+    like_count=[]
+    retweet_count=[]
+    reply_count=[]
+    quote_count=[]
+    retweeted = []
+    quoted = []
+    media=[]
+    lang=[]
+    url=[]
+    quoted_tweet_url=[]
 
     print("\n================================")
     print("Tweets collection started")
     print("================================\n")
 
-    tweets_df = get_all_tweets()
+    for tweet in tweepy.Paginator(client.get_users_tweets,id=28075780,
+                                  tweet_fields=['public_metrics','created_at','entities','lang','referenced_tweets'], 
+                                  media_fields=['media_key','type'], expansions='attachments.media_keys',
+                                  max_results=100).flatten():
+        
+        datetime.append(tweet.created_at)
+        text.append(tweet.text)
+        
+        try:
+            htag_list=[]
+            for htag in tweet.entities['hashtags']:
+                htag_list.append(htag['tag'])
+        except:
+            htag_list=[]
+        hashtags.append(htag_list)
+        
+        like_count.append(tweet.public_metrics['like_count'])
+        retweet_count.append(tweet.public_metrics['retweet_count'])
+        reply_count.append(tweet.public_metrics['reply_count'])
+        quote_count.append(tweet.public_metrics['quote_count'])
+           
+        try:
+            if tweet.referenced_tweets[0]['type']=='retweeted':
+                retweeted.append(1)
+                quoted.append(0)
+                quoted_tweet_url.append("")
+            elif tweet.referenced_tweets[0]['type']=='quoted':
+                retweeted.append(0)
+                quoted.append(1)
+                for url_iterator in tweet.entities['urls']:
+                    url_of_interest = url_iterator['expanded_url'] #last element of the url list has the url of the original quoted tweet
+                quoted_tweet_url.append(url_of_interest)
+            else:
+                retweeted.append(0)
+                quoted.append(0)
+                quoted_tweet_url.append("")
+        except:
+            retweeted.append(0)
+            quoted.append(0)
+            quoted_tweet_url.append("")
+                
+        try:
+            media.append(len(tweet.attachments['media_keys']))
+        except:
+            media.append(0)
+        lang.append(tweet.lang)
+        url.append("https://twitter.com/STOPTHETRAFFIK/status/"+str(tweet.id))
+
+    tweets_df = pd.DataFrame({'Datetime':datetime, 'Text':text, 'Hashtags':hashtags, 'Like Count':like_count, 'Retweet Count':retweet_count,'Reply Count':reply_count,'Quote Count':quote_count, 'Retweeted':retweeted, 'Quoted Tweet':quoted,'Media':media,'Language':lang,'URL':url,'Quoted Tweet url':quoted_tweet_url})
 
     print("\n================================")
-    print("Tweets collection completed")
+    print("Tweets collection completed. Applying transformations...")
     print("================================\n")
 
-    def clean_up_url(df,column):
-        """This function cleans up column values by replacing url with 1 and None with 0"""
-        cleaned_column = df[column].apply(lambda x: 0 if x is None else 1)
-        return cleaned_column
+    #adding date of update
+    tweets_df['Update Date'] = date.today().strftime("%d %b %Y")
 
-    # cleaning up column values by replacing urls with 1 and None with 0
-    # but first saving the quoted tweet urls to extract user names later before getting rid
-    tweets_df['Quoted Tweet url'] = tweets_df['Quoted Tweet'] 
-
-    for column in ['Retweeted','Quoted Tweet','Media']:
-        tweets_df[column] = clean_up_url(tweets_df,column)
-
-    # replacing None in hashtag column with empty list
-    tweets_df['Hashtags'] = tweets_df['Hashtags'].apply(lambda x: [] if x is None else x)
-    # calculating the number of hashtags in each tweet
+    #calculating the number of hashtags in each tweet
     tweets_df['Number of Hashtags'] = tweets_df['Hashtags'].apply(lambda x: len(x))
 
     #setting tweet id to use as key for join
@@ -131,7 +171,6 @@ def scrapping_job():
         merged['Frequency'].fillna(0, inplace=True)
         return merged
 
-
     tweets_df['Date']           = tweets_df['Datetime'].apply(lambda x: x.date())
     tweets_df['Tweet type']     = tweets_df.apply(lambda row: tweet_type(row), axis=1)
     tweets_df['Hashtag String'] = list_to_string(tweets_df,'Hashtags')
@@ -180,7 +219,6 @@ def scrapping_job():
     all_tweets_text_WC.set_dataframe(tweets_df_text_transformed_trimmed, start=(1,1))
     all_tweets_hashtag_WC.set_dataframe(tweets_df_hashtags_transformed_trimmed, start=(1,1))
 
-
     print("\n================================================================")
     print("PART 2: RETWEET ANALYSIS")
     print("================================================================\n")
@@ -208,16 +246,11 @@ def scrapping_job():
     print("Computed unique user handles. Fetching user info....")
     print("================================================================\n")
 
-    bearer_token = os.environ['Bearer_token'] #get bearer token from enviromental variables. Update with the one from your api keys
 
     def create_url(user_names_list, user_fields):
-        # Specify the usernames that you want to lookup below
-        # You can enter up to 100 comma-separated values.
         user_names = ','.join(user_names_list) if len(user_names_list)>1 else user_names_list[0]
-        
         usernames = f"usernames={user_names}"
         url = "https://api.twitter.com/2/users/by?{}&{}".format(usernames, user_fields)
-        print(url)
         return url
 
 
@@ -232,7 +265,6 @@ def scrapping_job():
 
     def connect_to_endpoint(url):
         response = requests.request("GET", url, auth=bearer_oauth,)
-        print(response.status_code)
         if response.status_code != 200:
             raise Exception(
                 "Request returned an error: {} {}".format(
@@ -323,9 +355,6 @@ def scrapping_job():
     #writing dataframes into the sheets
     retweets.set_dataframe(retweets_df_final_trimmed, start=(1,1))
 
-
-
-
     print("\n================================================================")
     print("PART 3: #humantrafficking ANALYSIS")
     print("================================================================\n")
@@ -362,6 +391,10 @@ def scrapping_job():
     print("Tweets collection completed")
     print("================================\n")
 
+    def clean_up_url(df,column):
+        """This function cleans up column values by replacing url with 1 and None with 0"""
+        cleaned_column = df[column].apply(lambda x: 0 if x is None else 1)
+        return cleaned_column
 
     # cleaning up column values by replacing url with 1 and None with 0
     for column in ['Retweeted','Quoted Tweet','Media']:
@@ -441,4 +474,4 @@ def scrapping_job():
     HT_hashtag_WC.set_dataframe(HT_hashtags_transformed_trimmed, start=(1,1))
 
     #program end time
-    print(f"Program ran for {round((time.time() - start_time),2)} seconds.")
+    print(f"Program ran for {round((time.time() - start_time)/60,2)} minutes.")

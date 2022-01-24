@@ -102,7 +102,6 @@ print("================================\n")
 
 #adding date of update
 tweets_df['Update Date'] = date.today().strftime("%d %b %Y")
-print(date.today().strftime("%d %b %Y"))
 
 #calculating the number of hashtags in each tweet
 tweets_df['Number of Hashtags'] = tweets_df['Hashtags'].apply(lambda x: len(x))
