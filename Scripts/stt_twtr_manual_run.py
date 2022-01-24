@@ -25,9 +25,8 @@ print("================================================================\n")
 start_time = time.time()
 
 #initiating tweepy client
-# bearer_token = os.environ['Bearer_token']
-# client = tweepy.Client(bearer_token=bearer_token)
-client = tweepy.Client(bearer_token="AAAAAAAAAAAAAAAAAAAAAP05WQEAAAAA6rthFTJ05X4y2HfTFtWASw6XYMY%3DjypvxyUvR6rebUZNaFeQxoAbaZat8Hk4VElzvjMxJ2rUSBKGAb")
+bearer_token = os.environ['Bearer_token']
+client = tweepy.Client(bearer_token=bearer_token)
 
 datetime = []
 text = []
@@ -185,9 +184,9 @@ print("================================================================\n")
 
 #remember to share the google sheet file with the service account email id before running below code
 #downloading the service account key from google drive
-# gdrive_id = os.environ['Google_drive_id']
+gdrive_id = os.environ['Google_drive_id']
 
-gdd.download_file_from_google_drive(file_id="1C95VARxRlhynAlsrPtP4jdzffwCWilVI", #gdrive_id
+gdd.download_file_from_google_drive(file_id=gdrive_id,
                                     dest_path='./secret_key.json',
                                     unzip=True)
 
@@ -195,8 +194,8 @@ gdd.download_file_from_google_drive(file_id="1C95VARxRlhynAlsrPtP4jdzffwCWilVI",
 client = pygsheets.authorize(service_account_file='secret_key.json')
 
 #open google sheet
-# gsheet_key = os.environ['Google_sheet_key']
-google_sheet = client.open_by_key("1oVKbbDQLQzcidjalVAulIOZXAGAUgQOto97R2t0uURs") #gsheet_key
+gsheet_key = os.environ['Google_sheet_key']
+google_sheet = client.open_by_key(gsheet_key)
 
 #selecting specific sheets
 all_tweets            = google_sheet.worksheet_by_title('All Tweets')
@@ -246,8 +245,6 @@ print("\n================================================================")
 print("Computed unique user handles. Fetching user info....")
 print("================================================================\n")
 
-# bearer_token = os.environ['Bearer_token'] #get bearer token from enviromental variables. Update with the one from your api keys
-bearer_token = "AAAAAAAAAAAAAAAAAAAAAP05WQEAAAAA6rthFTJ05X4y2HfTFtWASw6XYMY%3DjypvxyUvR6rebUZNaFeQxoAbaZat8Hk4VElzvjMxJ2rUSBKGAb"
 
 def create_url(user_names_list, user_fields):
     user_names = ','.join(user_names_list) if len(user_names_list)>1 else user_names_list[0]
