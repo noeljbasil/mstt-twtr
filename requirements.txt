@@ -7,4 +7,5 @@ pandas
 python-dateutil
 APScheduler==3.0.0
 requests
+git+https://github.com/tweepy/tweepy.git
 python-math
