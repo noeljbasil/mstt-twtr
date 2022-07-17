@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Importing Libraries
+# Importing necessary Libraries
 from   datetime import date
 from   google_drive_downloader import GoogleDriveDownloader as gdd
 from   nltk.corpus import stopwords
